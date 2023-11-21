@@ -1,0 +1,32 @@
+public class SurvivalCards {
+	private String name;
+	private int energy;
+	private int time;
+	private String description;
+
+	public SurvivalCards(String n, int t, int e, String d) {
+		name = n;
+		time = t;
+		energy = e;
+		description = d;
+	}
+	
+	public String getName() {
+		return name;
+	}
+	
+	public int getEnergy() {
+		return energy;
+	}
+	
+	public int getTime() {
+		return time;
+	}
+	public String getDesc() {
+		return description;
+	}
+	
+	public String showCard(int n){
+		return " " + n + "- " + name + "\tt: " + time + "  e: " + energy + "\n" + description;
+	}
+}
