@@ -1,0 +1,1148 @@
+import java.util.*;
+public class Survival {
+	
+	private int wood; //0 - 50
+	private int food; //0 - 50
+	private int fire; //0 - 10
+	private int shelter; //0 - 25
+	private int phy; //0 - 100
+	private int ment; //0 - 100
+	private int time;
+	private int energy;
+	private int day;
+	private int mentwin;
+	private int phywin;
+	private String power;
+	
+	//data management cards vvvvv
+	private int cardsplayed = 0;
+	private int bonuscards = 0;
+	public void setBonuscards(int x) {
+		bonuscards += x;
+	}
+	private int totalcardsdrawn = 0;
+	private int exhaustedcardtotal = 0;
+	private int woodgain = 0;
+	private int foodgain = 0;
+	private int firegain = 0;
+	private int sheltergain = 0;
+	private int phygain = 0;
+	private int mentgain = 0;
+	private int timespent = 0;
+	private int energyspent = 0;
+	private String dreamdiary = "\nDream Diary:";
+	
+	private ArrayList <SurvivalCards> deck = new ArrayList <SurvivalCards>();
+	private ArrayList <SurvivalCards> hand = new ArrayList <SurvivalCards>();
+	private ArrayList <SurvivalCards> discard = new ArrayList <SurvivalCards>();
+	private ArrayList <SurvivalCards> dreamcards = new ArrayList <SurvivalCards>();
+	
+	public Survival() {
+		wood = 0;
+		food = 15;
+		fire = 3;
+		shelter = 0;
+		phy = 40;
+		ment = 40;
+		time = 10;
+		energy = 0;
+		day = 1;
+		mentwin = 0;
+		phywin = 0;
+		power = "";
+		
+		//starting deck (15 here total, 10 unique cards)
+		deck.add(new SurvivalCards("Forage", 1, 1, "Gain 3 food."));
+		deck.add(new SurvivalCards("Forage", 1, 1, "Gain 3 food."));
+		deck.add(new SurvivalCards("Chop Trees", 2, 2, "Gain 4 wood."));
+		deck.add(new SurvivalCards("Chop Trees", 2, 2, "Gain 4 wood."));
+		deck.add(new SurvivalCards("Fish", 4, 1, "Gain 4 food. Draw 1 card."));
+		deck.add(new SurvivalCards("Fish", 4, 1, "Gain 4 food. Draw 1 card."));
+		deck.add(new SurvivalCards("Yoga", 2, 2, "Gain 3 ment and gain 2 phy"));
+		deck.add(new SurvivalCards("Jog  ", 0, 0, "Spend the rest of your energy. Gain 2 phy for every energy spent"));
+		deck.add(new SurvivalCards("Meditate", 2, 0, "Gain 4 ment. Draw 1 card."));
+		deck.add(new SurvivalCards("Build", 1, 2, "Gain 4 shelter. Lose 3 wood."));
+		deck.add(new SurvivalCards("Build", 1, 2, "Gain 4 shelter. Lose 3 wood."));
+		deck.add(new SurvivalCards("Start Fire", 2, 2, "Gain 2 fire (Only if you have 0 fire)."));
+		deck.add(new SurvivalCards("Tend Fire", 2, 1, "Spend 1 wood to gain 3 fire (if you have at least 1 fire)."));
+		deck.add(new SurvivalCards("Tend Fire", 2, 1, "Spend 1 wood to gain 3 fire (if you have at least 1 fire)."));
+		deck.add(new SurvivalCards("Rest", 0, 0, "Spend the rest of your time. Gain 1 ment and 1 phy for every 2 time spent."));
+		
+	}
+	
+	public ArrayList <SurvivalCards> getDeck(){
+		return deck;
+	}
+	public ArrayList <SurvivalCards> getHand(){
+		return hand;
+	}
+	public ArrayList <SurvivalCards> getDiscard(){
+		return discard;
+	}
+	public ArrayList <SurvivalCards> getDreamcards(){
+		return dreamcards;
+	}
+	
+	public void drawCards(int x) { //draws x random cards from the deck
+		for (int loop = 0; loop < x; loop++) {
+			if (deck.size() == 0 && discard.size() == 0) {
+				System.out.println("Error! Sort of... There are no more cards to be drawn.");
+				break;
+			}
+			if (deck.size() == 0) {
+				this.replace();
+			}
+			int y = (int) (Math.random() * deck.size()); //finds the card to draw
+			
+			if (deck.get(y).getName() == "Vitality")
+				this.setPhy(4);
+			if (deck.get(y).getName() == "Inspire")
+				this.setMent(4);
+			
+			hand.add(deck.get(y));                     //card gets moved
+			deck.remove(y);
+			totalcardsdrawn++;
+		}
+	}
+	
+	public String showHand() {    //shows hand as a list
+		String result = "";
+		for (int loop = 0; loop < hand.size(); loop ++) {
+			result += hand.get(loop).showCard(loop + 1);
+			result += "\n\n";
+		}
+		return result;
+	}
+	
+	public String showDeck() {
+		String result = "";
+		for (int loop = 0; loop < deck.size(); loop ++) {
+			result += deck.get(loop).showCard(loop + 1);
+			result += "\n\n";
+		}
+		return result;
+	}
+	
+	public String showDiscard() {
+		String result = "";
+		for (int loop = 0; loop < discard.size(); loop ++) {
+			result += discard.get(loop).showCard(loop + 1);
+			result += "\n\n";
+		}
+		return result;
+	}
+	
+	public void showVariables() {
+		System.out.println("Power: ");
+		if (power == "agenda")
+			System.out.println("Agenda. Gain 1 ment every time you draw a bonus card");
+		else if (power == "flex")
+			System.out.println("Flex. Gain 2 phy every time you exhaust a card");
+		else if (power == "arson")
+			System.out.println("Arson. If possible, at the end of your turn, lose 5 shelter to not have your fire stat depleted");
+		else if (power == "stronghold")
+			System.out.println("Stronghold. Shelter is no longer depleted at the end of a turn");
+		else if (power == "gluttony")
+			System.out.println("Gluttony. Gain 1 phy and 1 ment when you eat the maximum amount of food");
+		else
+			System.out.println("N/A");
+		this.intro();
+		
+		//result += "\n\nCards played this turn: " + cardsplayed;
+		//result += "\nExtra cards drawn this turn: " + bonuscards;
+	}
+	
+	public void redeal() { //puts hand in deck
+		while (hand.size() > 0) {
+			deck.add(hand.get(0));
+			hand.remove(0);
+		}
+	}
+	
+	public void replace() { //puts discard in deck
+		while (discard.size() > 0) {
+			deck.add(discard.get(0));
+			discard.remove(0);
+		}
+	}
+	
+	public void reshuffle() { //puts discard and hand in deck
+		this.replace();
+		this.redeal();
+	}
+	
+	public void discardHand() { //puts hand in discard
+		while (hand.size() > 0) {
+			discard.add(hand.get(0));
+			hand.remove(0);
+		}
+	}
+	
+	public void clearScreen() { //adds a bunch of empty space - used for clarity
+		for (int loop = 0; loop < 50; loop ++)
+		System.out.println();
+	}
+	
+	public boolean winCheck() {
+		if (ment <= 0) {
+			System.out.println("In your endeavor to survive, your mental health dips to a point that you cannot recover from."
+					+ "\nYour grasp on reality slips away from you, like what happened to Robert Pattinson in Oscar winning movie \"The Lighthouse\"."
+					+ "\n\nYou die... GAME OVER! :/");
+			this.results();
+			return true;
+		}
+		if (phy <= 0) {
+			System.out.println("As conditions in the wilderness worsen, your body collapses under stress."
+					+ "\nMay this death inspire you to hit the gym more often, broski. Like, irl."
+					+ "\n\nYou die... GAME OVER! :P");
+			this.results();
+			return true;
+		}
+		if (mentwin == 10) {
+			System.out.println("After worshipping the holy idol, its image repeats time and time in your dream that night. You feel... weightless."
+					+ "\nWhen you wake up, you're in your bed at your house. Cool!"
+					+ "\n\nYou Win! Congragulations!");
+			this.results();
+			return true;
+		}
+		if (phywin == 10) {
+			System.out.println("The raft is finished! The current floats you away from shore, only for you to realize you have no paddle, sail, or engine..."
+					+ "\nBut it's no biggie. A fisherboat spots you in like 20 minutes and rescues you."
+					+ "\n\nYou Win! Congragulations!");
+			this.results();
+			return true;
+		}
+		if (day == 41) {
+			System.out.println("You wake up to an ear-splitting explosion. The volcano you were supposed to study has erupted!"
+					+ "\nYou can't escape the lava, and your body is encased in igneous rock Han Solo-style."
+					+ "\n\nYou Lose... GAME OVER :(");
+			this.results();
+		}
+		return false;
+	}
+
+	//Dreamy <3 <3 <3 ^__^ ooh la la
+	
+	public void makeDream() {
+		dreamcards.clear();
+		int a = -1;
+		int b = -1;
+		int y;
+		for (int loop = 0; loop < 3; loop ++) {  //loop runs three times
+			
+			do{            //makes sure no repeats
+			 y = (int) (Math.random() * 26); //multiply by how many results there can be (last y == but plus 1)
+			} while (y == a || y == b);
+			if (loop == 0)
+				a = y;
+			if (loop == 1)
+				b = y;
+			
+			if (y == 1)							
+				dreamcards.add(new SurvivalCards ("Assemble", 4, 1, "Gain shelter equal to the number of cards in your hand (must have enough wood)"));
+			if (y == 2)
+				dreamcards.add(new SurvivalCards ("Bench Press", 5, 2, "(2 wood required) Gain 8 phy"));
+			if (y == 3)
+				dreamcards.add(new SurvivalCards ("Burn", 0, 0, "(Required: at least 1 fire) Exhaust a random card in your hand. Gain 2 fire"));
+			if (y == 4)							
+				dreamcards.add(new SurvivalCards ("Construct", 6, 6, "Cut your wood stat in half, and add that to your shelter. Exhaust"));
+			if (y == 5)
+				dreamcards.add(new SurvivalCards ("Cook Meat", 2, 0, "If your last card played was \"Fish\", a \"Crab Trap\" harvest, or a successful \"Hunt\", gain that food again"));
+			if (y == 6)
+				dreamcards.add(new SurvivalCards ("Cozy Up", 2, 0, "Gain ment equal to your fire stat"));
+			if (y == 7)
+				dreamcards.add(new SurvivalCards ("Crab Trap", 3, 1, "Play once to set the trap, play again to empty it and gain 6 food"));
+			if (y == 8)
+				dreamcards.add(new SurvivalCards ("Deep Breath", 2, 0, "Discard your Hand. Replace the cards discarded"));
+			if (y == 9)
+				dreamcards.add(new SurvivalCards ("Eat Bugs", 1, -2, "Gain 2 energy. Lose 3 ment"));
+			if (y == 10)
+				dreamcards.add(new SurvivalCards ("Feast", 0, -2, "Gain 2 energy. Gain 4 ment. Lose 3 food"));
+			if (y == 11)
+				dreamcards.add(new SurvivalCards ("Fortify", 5, 5, "Lose 5 wood. Gain 12 shelter. Exhaust"));
+			if (y == 12)
+				dreamcards.add(new SurvivalCards ("Harvest", 3, 2, "Gain " + harvest + " food. Increase the value by 1 for all \"Harvest\" cards when played (max 12)"));
+			if (y == 13)
+				dreamcards.add(new SurvivalCards ("Hunt", 3, 3, "50%- Gain 8 food. 50%- Gain nothing."));
+			if (y == 14)
+				dreamcards.add(new SurvivalCards ("Inspire", 0, 0, "Unplayable. When you draw this card, gain 4 ment"));
+			if (y == 15)
+				dreamcards.add(new SurvivalCards ("Lightning", 0, 2, "Start fire and raise it by 5. Exhaust"));
+			if (y == 16)
+				dreamcards.add(new SurvivalCards ("Patience", 1, 0, "Draw 2 cards. Reusable"));
+			if (y == 17)
+				dreamcards.add(new SurvivalCards ("Plan", 3, 0, "Next turn, draw 3 extra cards and gain 2 time"));
+			if (y == 18)
+				dreamcards.add(new SurvivalCards ("Push-Ups", 2, 1, "Gain 6 phy. Increase this card's energy cost by 1"));
+			if (y == 19)
+				dreamcards.add(new SurvivalCards ("Rage", 1, 0, "Gain 2 phy. Add a copy of this card to your deck. Exhaust"));
+			if (y == 20)
+				dreamcards.add(new SurvivalCards ("Recycle", 2, 0, "For the rest of the turn, gain 1 wood every time you play a card"));
+			if (y == 21)
+				dreamcards.add(new SurvivalCards ("Split", 2, 0, "Evenly distribute your phy and ment. Exhaust"));
+			if (y == 22)
+				dreamcards.add(new SurvivalCards ("Synthesis", 6, 2, "Gain wood equal to the day divided by two"));
+			if (y == 23)
+				dreamcards.add(new SurvivalCards ("Timber!", 4, 3, "Gain 7 wood and 2 food. Draw 1 card"));
+			if (y == 24)
+				dreamcards.add(new SurvivalCards ("Vitality", 0, 0, "Unplayable. When you draw this card, gain 4 phy"));
+			if (y == 25)
+				dreamcards.add(new SurvivalCards ("Worry", -2, 0, "Gain 2 time. Lose 3 ment."));
+			
+			if (y == 0)
+				this.powerTrip(); //This will add arson, flex, stronghold, agenda, or gluttony. But won't be something the player already has.
+		}
+		this.dreamBonus();
+	}
+	
+	public void powerTrip() {
+		int y;
+		
+		do {
+		y= (int) (Math.random() * 5);
+		}while((y==0 && power=="agenda") || (y==1 && power=="arson") || (y==2 && power=="stronghold") || (y==3 && power=="flex") || (y==5 && power=="gluttony"));
+		
+		if (y == 0)
+			dreamcards.add(new SurvivalCards ("Agenda", 4, 0, "Power. When you draw a bonus card, gain 1 ment. Exhaust"));
+		if (y == 1)
+			dreamcards.add(new SurvivalCards ("Arson", 4, 3, "Power. If possible, at the end of your turn, lose 5 total shelter to not have your fire stat depleted. Exhaust"));
+		if (y == 2)
+			dreamcards.add(new SurvivalCards ("Stronghold", 3, 4, "Power. You no longer lose shelter at the end of your turn. Exhaust"));
+		if (y == 3)
+			dreamcards.add(new SurvivalCards ("Flex", 2, 4, "Power. When you exhaust a card, gain 2 phy. Exhaust"));
+		if (y == 4)
+			dreamcards.add(new SurvivalCards ("Gluttony", 3, 5, "Power. When you eat the maximum amount of food, gain 1 phy and 2 ment. Exhaust"));
+	}
+	
+	public void dreamPull(int x) {
+		deck.add(dreamcards.get(x));
+		if (dreamcards.get(x).getName() == "Raft 1")
+			phywin = 1;
+		if (dreamcards.get(x).getName() == "Raft 2")
+			phywin = 3;
+		if (dreamcards.get(x).getName() == "Raft 3")
+			phywin = 5;
+		if (dreamcards.get(x).getName() == "Raft 4")
+			phywin = 7;
+		if (dreamcards.get(x).getName() == "Raft 5")
+			phywin = 9;
+		if (dreamcards.get(x).getName() == "Worship 1")
+			mentwin = 1;
+		if (dreamcards.get(x).getName() == "Worship 2")
+			mentwin = 3;
+		if (dreamcards.get(x).getName() == "Worship 3")
+			mentwin = 5;
+		if (dreamcards.get(x).getName() == "Worship 4")
+			mentwin = 7;
+		if (dreamcards.get(x).getName() == "Worship 5")
+			mentwin = 9;
+		dreamdiary += "\nNight " + (day-1) + ": Added   " + dreamcards.get(x).getName();
+		this.clearScreen();
+	}
+	
+	public void dreamDisplay() {
+		for (int loop = 0; loop < dreamcards.size(); loop ++) {
+			System.out.println(dreamcards.get(loop).showCard(loop+1) + "\n");
+		}
+		
+		System.out.println("\nYou may enter a card to be added to the deck (number displayed), remove a card from the deck (-1), or skip (0)");
+	}
+	
+	public void dreamBonus() {
+		if (day % 2 == 1) {
+			if (mentwin == 0)
+				dreamcards.add(new SurvivalCards("Worship 1", 6, 0, "(Ment of 50 required) Offer 3 food as an offering to the strange idol. Exhaust"));
+			if (mentwin == 2)
+				dreamcards.add(new SurvivalCards("Worship 2", 7, 0, "(Ment of 60 required) Offer 6 food as an offering to the strange idol. Exhaust"));
+			if (mentwin == 4)
+				dreamcards.add(new SurvivalCards("Worship 3", 8, 0, "(Ment of 70 required) Offer 9 food as an offering to the strange idol. Exhaust"));
+			if (mentwin == 6)
+				dreamcards.add(new SurvivalCards("Worship 4", 9, 0, "(Ment of 80 required) Offer 12 food as an offering to the strange idol. Exhaust"));
+			if (mentwin == 8)
+				dreamcards.add(new SurvivalCards("Worship 5", 10, 0, "(Ment of 90 required) Offer 15 food as an offering to the holy idol. Exhaust"));
+		}
+		
+		if (day % 2 == 0) {
+			if (phywin == 0)
+				dreamcards.add(new SurvivalCards("Raft 1", 1, 6, "Use 3 wood to start building a raft to escape. Exhaust"));
+			if (phywin == 2)
+				dreamcards.add(new SurvivalCards("Raft 2", 2, 7, "Use 6 wood to continue building a raft to escape. Exhaust"));
+			if (phywin == 4)
+				dreamcards.add(new SurvivalCards("Raft 3", 3, 8, "Use 9 wood to continue building a raft to escape. Exhaust"));
+			if (phywin == 6)
+				dreamcards.add(new SurvivalCards("Raft 4", 4, 9, "Use 12 wood to continue building a raft to escape. Exhaust"));
+			if (phywin == 8)
+				dreamcards.add(new SurvivalCards("Raft 5", 5, 10, "Use 15 wood to finish building a raft and escape. Exhaust"));
+		}
+	}
+	
+	
+	//player stats vvv
+	
+		
+	public int getWood() {
+			return wood;
+		}
+	public int getFood() {
+			return food;
+		}
+	public int getFire() {
+			return fire;
+		}
+	public int getShelter() {
+			return shelter;
+		}
+	public int getPhy() {
+			return phy;
+		}
+	public int getMent() {
+			return ment;
+	}
+	public int getTime() {
+		return time;
+}
+	public int getEnergy() {
+			return energy;
+	}
+	public int getDay() {
+		return day;
+	}
+	public int getMentwin() {
+		return mentwin;
+	}
+	public int getPhywin() {
+		return phywin;
+	}
+	public String getPower() {
+		return power;
+	}
+	
+	public void setWood (int x) {
+		int y = wood;
+			wood += x;
+			if (wood > 25)
+				wood = 25;
+		if (wood > y)
+			woodgain += wood - y;
+		}	
+	public void setFood (int x) {
+		int y = food;
+			food += x;
+			if (food > 25)
+				food = 25;
+		if (food > y)
+			foodgain += food - y;
+		}	
+	public void setFire (int x) {
+		int y = fire;
+			fire += x;
+			if (fire > 10)
+				fire = 10;
+			if (fire < 0)
+				fire = 0;
+		if (fire > y)
+			firegain += fire - y;
+		}	
+	public void setShelter (int x) {
+		int y = shelter;
+			shelter += x;
+			if (shelter > 25)
+				shelter = 25;
+			if (shelter < 0)
+				shelter = 0;
+		if (shelter > y)
+			sheltergain += shelter - y;
+		}	
+	public void setPhy (int x) {
+		int y = phy;
+			phy += x;
+			if (phy > 100)
+				phy = 100;
+		if (phy > y)
+			phygain += phy - y;
+		}
+	public void setMent (int x) {
+		int y = ment;
+			ment += x;
+			if (ment > 100)
+				ment = 100;
+		if (ment > y)
+			mentgain += ment - y;
+	}
+	
+	public void setTime(int x) {
+		time = x;
+	}
+	public void setEnergy(int x) {
+		energy = x;
+	}
+	
+	public String getStats() {
+			String result = "Day " + day;
+			result += " - Time: " + time + "  Energy: " + energy;
+			result += "  Wood: " + wood + "  Food: " + food + "  Fire: " + fire;
+			result += "  Shelter: " + shelter + "  Phy: " + phy + "  Ment: " + ment;
+			return result;
+	}
+	
+	public void removeCard1() {
+		int loop;
+		int loop2;
+		System.out.println("\nCards in the deck:");
+		for (loop = 0; loop < deck.size(); loop ++) {
+			System.out.println(deck.get(loop).showCard(loop+1));
+		}
+		System.out.println("\nCards in the discard pile:");
+		for (loop2 = 0; loop2 < discard.size(); loop2++) {
+			System.out.println(discard.get(loop2).showCard(loop+1));
+			loop += 1;
+		}
+		System.out.println("\nEnter a card to remove (0 to cancel)");
+		
+	}
+	
+	public boolean removeCard2(int x) {
+		if (x == 0)
+			return true;
+		if (x > deck.size()) {
+			x -= deck.size();
+			dreamdiary += "\nNight " + (day-1) + ": Removed " + discard.get(x-1).getName();
+			discard.remove(x-1);
+		}
+		else {
+			dreamdiary += "\nNight " + (day-1) + ": Removed " + deck.get(x-1).getName();
+			deck.remove(x-1);
+		}
+		return false;
+	}
+
+	public void endTurn() {
+		day++;
+		this.setPhy(shelter / 5 - 5);
+		this.setMent(shelter / 5 - 5);
+		if (power != "arson" || shelter < 5)
+			this.setFire(-1);
+		else
+			this.setShelter(-3);
+		if (shelter != 0 && power != "stronghold")
+			this.setShelter(-2);
+		
+		
+
+		recycle = false;
+		if (plan > 0)
+			plan--;
+		/*if (plantcount > 0)
+			plantcount --;
+		if ((plantcount - 1) % 3 == 0) {
+			System.out.println("Your plant harvests! You gain 5 wood and 5 food!\n");
+			
+			this.setFood(5);
+			this.setWood(5);
+		}*/
+		
+	}
+	
+	//Card Vailidity vvvvv
+	
+	public boolean cardValid (SurvivalCards x, int t, int e) { //checks to see if there is enough time & energy
+		if (t < x.getTime()) {
+			System.out.println("There isn't enough time to do that!");
+			return false;
+		}
+			else if (e < x.getEnergy()) {
+			System.out.println("You don't have enough energy to do that!");
+			return false;
+		}
+		
+		if (x.getName() == "Assemble") {
+			if (wood < hand.size()) {
+				System.out.println("Error! You don't have enough wood");
+				return false;
+			}
+		}
+		
+		if (x.getName() == "Bench Press") {
+			if (wood < 2) {
+				System.out.println("Error! Not enough wood!");
+				return false;
+			}
+		}
+		
+		if (x.getName() == "Build") {
+			if (wood < 3) {
+				System.out.println("Error! Not enough wood!");
+				return false;
+			}
+		}
+		
+		if (x.getName() == "Burn") {
+			if (fire == 0) {
+				System.out.println("Error! You have no fire to burn the card with!");
+				return false;
+			}
+			if (hand.size() == 1) {
+				System.out.println("Error! You would have no cards to burn!");
+			}
+		}
+		
+		if (x.getName() == "Cook Meat") {
+			if (meat < 1) {
+				System.out.println("Error! The last card played wasn't \"Fish\", a \"Crab Trap\" harvest, or a successful \"Hunt\"");
+				return false;
+			}
+			if (fire == 0) {
+				System.out.println("Error! You have no fire to cook the fire with!");
+				return false;
+			}
+		}
+		
+		if (x.getName() == "Cozy Up") {
+			if (fire == 0) {
+				System.out.println("Error! You have no fire to cozy up to!");
+				return false;
+			}
+		}
+		
+		if (x.getName() == "Fortify") {
+			if (wood < 5) {
+				System.out.println("Error! Not enough wood!");
+				return false;
+			}
+		}
+		
+		if (x.getName() == "Feast") {
+			if (food < 3) {
+				System.out.println("Error! Not enough food!");
+				return false;
+			}
+		}
+		
+		if (x.getName() == "Inspire") {
+			System.out.println("Error! This card is unplayable!");
+			return false;
+		}
+		
+		/*if (x.getName() == "Plant Crop") {
+			if (food == 0) {
+				System.out.println("Error! You have no food to plant a seed!");
+				return false;
+			}
+		}*/
+		
+		if (x.getName() == "Push-Ups") {
+			pushup = x.getEnergy()+1;
+		}
+		
+		if (x.getName() == "Start Fire") {
+			if (fire != 0) {
+				System.out.println("Error! You already have fire!");
+				return false;
+			}
+		}
+		
+		if (x.getName() == "Tend Fire") {
+			if (wood < 1) {
+				System.out.println("Error! You have no wood to tend the fire with!");
+				return false;
+			}
+			else if (fire <= 0) {
+				System.out.println("Error! You don't have a fire to tend!");
+				return false;
+			}
+			else if (fire >= 10) {
+				System.out.println("Error! Your fire is already as strong as it can get!");
+				return false;
+			}
+		}
+		
+		if (x.getName() == "Vitality") {
+			System.out.println("Error! This card is unplayable!");
+			return false;
+		}
+		
+		if (x.getName() == "Raft 1") {
+			if (wood < 3) {
+				System.out.println("Error! You don't have enough wood to start on the raft!");
+			return false;
+			}
+		}
+		if (x.getName() == "Raft 2") {
+			if (wood < 6) {
+				System.out.println("Error! You don't have enough wood to work on the raft!");
+			return false;
+			}
+		}
+		if (x.getName() == "Raft 3") {
+			if (wood < 9) {
+				System.out.println("Error! You don't have enough wood to work on the raft!");
+			return false;
+			}
+		}
+		if (x.getName() == "Raft 4") {
+			if (wood < 12) {
+				System.out.println("Error! You don't have enough wood to work on the raft!");
+			return false;
+			}
+		}
+		if (x.getName() == "Raft 5") {
+			if (wood < 15) {
+				System.out.println("Error! You don't have enough wood to finish the raft!");
+			return false;
+			}
+		}
+		
+		if (x.getName() == "Worship 1") {
+			if (food < 3) {
+				System.out.println("Error! You don't have enough food to satisfy the idol!");
+			return false;
+			}
+			if (ment < 50) {
+				System.out.println("Error! The idol doesn't deem you worthy. You need more mental fortitude.");
+				return false;
+			}
+		}
+		if (x.getName() == "Worship 2") {
+			if (food < 6) {
+				System.out.println("Error! You don't have enough food to satisfy the idol!");
+			return false;
+			}
+			if (ment < 60) {
+				System.out.println("Error! The idol doesn't deem you worthy. You need more mental fortitude.");
+				return false;
+			}
+		}
+		if (x.getName() == "Worship 3") {
+			if (food < 9) {
+				System.out.println("Error! You don't have enough food to satisfy the idol!");
+			return false;
+			}
+			if (ment < 70) {
+				System.out.println("Error! The idol doesn't deem you worthy. You need more mental fortitude.");
+				return false;
+			}
+		}
+		if (x.getName() == "Worship 4") {
+			if (food < 12) {
+				System.out.println("Error! You don't have enough food to satisfy the idol!");
+			return false;
+			}
+			if (ment < 80) {
+				System.out.println("Error! The idol doesn't deem you worthy. You need more mental fortitude.");
+				return false;
+			}
+		}
+		if (x.getName() == "Worship 5") {
+			if (food < 15) {
+				System.out.println("Error! You don't have enough food to satisfy the idol!");
+			return false;
+			}
+			if (ment < 90) {
+				System.out.println("Error! The idol doesn't deem you worthy. You need more mental fortitude.");
+				return false;
+			}
+		}
+		//if the card goes through
+		timespent += x.getTime();
+		energyspent += x.getEnergy();
+	
+		return true;
+	}
+	
+	//Card Effects vvvvv
+	private int meat = 0;
+	//private int plantcount = 0;
+	private int harvest = 1;
+	private int plan = 0;
+	private Boolean leavehand = true;
+	private Boolean crabtrap = false;
+	private Boolean recycle = false;
+	private int pushup;
+	public Boolean getLeaveHand() {
+		return leavehand;
+	}
+	public int getPlan() {
+		return plan;
+	}
+	
+	public void dreamdiaryupdate() {
+		dreamdiary += "\nNight " + (day-1) + ": Skipped";
+	}
+
+	
+	public boolean cardEffect(String name, int input) {
+		
+		if (name == "Assemble") {
+			this.setWood(-hand.size());
+			this.setShelter(hand.size());
+		}	
+		
+		if (name == "Bench Press") {
+			this.setPhy(8);
+	}
+		
+		if (name == "Build") {
+				this.setShelter(5);
+				this.setWood(-3);
+		}
+		
+		if (name == "Burn") {
+			discard.add(hand.get(input));
+			hand.remove(input);
+			int x = (int) (Math.random()*hand.size());
+			System.out.println("The exhausted card is: " + hand.get(x).getName());
+			hand.remove(x);
+			leavehand= false;
+			this.setFire(2);
+	}
+		
+		if (name == "Chop Trees") {
+			this.setWood(4);
+		}
+		
+		if (name == "Construct") {
+			int x = wood / 2;
+			this.setWood(-x);
+			this.setShelter(x);
+		}
+		
+		if (name == "Cook Meat") {
+			if (discard.get(discard.size()-1).getName() == "Fish")
+			this.setFood(4);
+			else if (discard.get(discard.size()-1).getName() == "Crab Trap")
+				this.setFood(6);
+			else
+				this.setFood(8);
+		}
+		
+		if (name == "Crab Trap" && crabtrap == true) {
+				this.setFood(6);
+				meat = 2;
+				crabtrap = false;
+		}
+		if (name == "Crab Trap" && crabtrap == false)
+				crabtrap = true;
+		
+		if (name == "Cozy Up") {
+			this.setMent(this.getFire());
+		}
+		
+		if (name == "Deep Breath") {
+			int x = (hand.size() - 1);
+			this.discardHand();
+			this.drawCards(x);
+			bonuscards += x;
+			if (power == "agenda")
+				this.setMent(x);
+		}
+		
+		if (name == "Eat Bugs") {
+			this.setMent(-3);
+		}
+		
+		if (name == "Feast") {
+			this.setMent(4);
+			this.setFood(-3);
+		}
+		
+		if (name == "Fish") {
+			this.setFood(4);
+			this.drawCards(1);
+			bonuscards += 1;
+			meat = 2;
+			if (power == "agenda")
+				this.setMent(1);
+		}
+		
+		if (name == "Forage") {
+			this.setFood(3);
+		}
+		
+		if (name == "Fortify") {
+			this.setShelter(12);
+			this.setWood(-5);
+	}
+		
+		if (name == "Harvest") {
+			this.setFood(harvest);
+			harvest++;
+			discard.add(new SurvivalCards ("Harvest", 3, 2, "Gain " + harvest + " food. Increase the value by 1 when played"));
+		}
+		
+		if (name == "Hunt") {
+			double x = Math.random();
+			if (x <= 0.5) 
+				this.setFood(8);
+		}
+		
+		if (name == "Lightning")
+			this.setFire(5);
+		
+		if (name == "Jog  ") {
+			this.setPhy(energy * 2);
+			this.setEnergy(0);
+		}
+		
+		if (name == "Meditate") {
+			this.setMent(4);
+			this.drawCards(1);
+			bonuscards += 1;
+			if (power == "agenda")
+				this.setMent(1);
+		}
+		
+		if (name == "Plan") {
+			plan = 2;
+		}
+		
+		/*if (name == "Plant Crop") {
+			if (plantcount == 0)
+				plantcount = 4;
+			else
+				plantcount += 3;
+		}*/
+		
+		if (name == "Patience") {
+			this.drawCards(2);
+			bonuscards += 2;
+		}
+		
+		if (name == "Push-Ups") {
+			this.setPhy(6);
+			discard.add(new SurvivalCards ("Push-Ups", 2, pushup, "Gain 6 phy. Increase this card's energy cost by 1"));
+			
+		}
+		
+		if (name == "Rage") {
+			this.setPhy(2);
+			deck.add(new SurvivalCards ("Rage", 1, 0, "Gain 2 phy. Add a copy of this card to your deck. Exhaust"));
+		}
+		
+		if (name == "Recycle") {
+			recycle = true;
+		}
+		
+		if (name == "Rest") {
+			this.setMent(time / 2);
+			this.setPhy(time / 2);
+			time = 0;
+		}
+		
+		if (name == "Synthesis") {
+			this.setWood(day / 2);
+		}
+		
+		if (name == "Split") {
+			int x = ment + phy;
+			this.setMent(-ment);
+			this.setPhy(-phy);
+			this.setMent(x);
+			this.setPhy(x);
+		}
+		
+		/*if (name == "Spontaniety") {
+			this.drawCards(1);
+			System.out.println("The card is: " + hand.get(hand.size()-1).getName() + " " + hand.get(hand.size()-1).getDesc());
+			if (this.cardValid(hand.get(hand.size()-1), time, energy)) {
+				if (!(this.cardEffect(hand.get(hand.size()-1).getName(), input))) {
+					discard.add(hand.get(hand.size()-1));
+				}
+			}
+			else {
+				discard.add(hand.get(hand.size()-1));
+			}
+			hand.remove(hand.size()-1);
+	}*/
+		
+		if (name == "Start Fire") {
+				this.setFire(2);
+		}
+		
+		/*if (name == "Sugar Rush") {
+			this.setEnergy(this.getEnergy() * 2);
+	}*/
+		
+		if (name == "Tend Fire") {
+				this.setWood(-1);
+				this.setFire(3);
+		}
+		
+		if (name == "Timber!") {
+			this.setWood(7);
+			this.setFood(2);
+			this.drawCards(1);
+			bonuscards += 1;
+		}
+		
+		if (name == "Worry") {
+			this.setMent(-3);
+		}
+		
+		if (name == "Yoga") {
+			this.setMent(3);
+			this.setPhy(2);
+		}
+		
+		if (name == "Agenda") {
+			power = "agenda";
+		}
+		
+		if (name == "Flex") {
+			power = "flex";
+		}
+		
+		if (name == "Stronghold") {
+			power = "stronghold";
+		}
+		
+		if (name == "Arson") {
+			power = "arson";
+		}
+		
+		if (name == "Gluttony") {
+			power = "gluttony";
+		}
+		
+		if (name == "Raft 1") {
+			this.setWood(-3);
+			phywin = 2;
+		}
+		if (name == "Raft 2"){
+			this.setWood(-6);
+			phywin = 4;
+		}
+		if (name == "Raft 3"){
+			this.setWood(-9);
+			phywin = 6;
+		}
+		if (name == "Raft 4"){
+			this.setWood(-12);
+			phywin = 8;
+		}
+		if (name == "raft 5"){
+			this.setWood(-15);
+			phywin = 10;
+		}
+		
+		if (name == "Worship 1") {
+			this.setFood(-3);
+			mentwin = 2;
+		}
+		if (name == "Worship 2") {
+			this.setFood(-6);
+			mentwin = 4;
+		}
+		if (name == "Worship 3") {
+			this.setFood(-9);
+			mentwin = 6;
+		}
+		if (name == "Worship 4") {
+			this.setFood(-12);
+			mentwin = 8;
+		}
+		if (name == "Worship 5") {
+			this.setFood(-15);
+			mentwin = 10;
+		}
+		
+
+		cardsplayed ++;
+		if (meat > 0)
+			meat--;
+		if (name != "Burn" && name != "Patience")
+			leavehand = true;
+		if (recycle == true)
+			this.setWood(1);
+		
+		if (name == "Raft 1" || name == "Raft 2" || name == "Raft 3" || name == "Raft 4" || name == "Raft 5") {
+			if (power == "flex")
+				this.setPhy(2);
+			exhaustedcardtotal++;
+			return true;
+		}
+		if (name == "Worship 1" || name == "Worship 2" || name == "Worship 3" || name == "Worship 4" || name == "Worship 5"){
+			if (power == "flex")
+				this.setPhy(2);
+			exhaustedcardtotal++;
+			return true;
+		}
+		if (name == "Arson" || name == "Stronghold" || name == "Agenda" || name == "Flex" || name == "Glutttony"){
+			if (power == "flex")
+				this.setPhy(2);
+			exhaustedcardtotal++;
+			return true;
+		}
+		if (name == "Lightning" || name == "Split" || name == "Construct" || name == "Burn" || name == "Rage" || name == "Fortify"){
+			if (power == "flex")
+				this.setPhy(2);
+			exhaustedcardtotal++;
+			return true;
+		}
+		if (name == "Harvest" || name == "Patience" || name == "Push-Ups") {
+			return true;
+		}
+		
+		return false; 				//return true means the card exhausts
+	}
+	
+	public void intro() {
+		System.out.println("After sailing to a remote island to study a volcano, your boat crashes!");
+		System.out.println("Luckily, you manage to swim to a the deserted island, but with only an emergency cooler with 15 portions of food.");
+		System.out.println("If your math is right, the volcano should erupt after 40 days.");
+		System.out.println("You could build a raft to leave early. And a strange idol in the middle of the island also feels lucky.");
+		
+		System.out.println("\nTutorial:");
+		System.out.println("Time & Energy: These are required to perform tasks to ensxure your survival.");
+		System.out.println("  Each day, you start with 10 time. Energy is gained when you eat food at the beginning of the day.");
+		System.out.println("Wood and Food (0-25) are collectable, usable resources to help you survive.");
+		System.out.println("  Wood is used primarily for building shelter, and food gives you energy.");
+		System.out.println("Shelter (0-25) protects you from the elements. The better your shelter, the less your health will deplete.");
+		System.out.println("Fire (0-10) allows you to perform certain actions. If you run out, you will have a penalty to energy.");
+		System.out.println("Phy (physical) and Ment (mental) (0-100) are measures for your character's health. If either one hits 0, you die.");
+		System.out.println("A high Phy will allow you to eat more food, and a high Ment lets you draw more cards at the beginning of the turn.");
+		
+		System.out.println("\nWhen you end your turn, you may choose to add or remove cards from your deck");
+		System.out.println("If a card exhausts, it is removed from play for good");
+		System.out.println("Power cards last indefinitely, but you may only have 1 active at once");
+		System.out.println("Cards that end in a number may lead to a victory");
+		System.out.println("Whenever something doesn't divide evenly, it always rounds down");
+		
+		System.out.println("\nTo see this information again, opt to view \"rules\" during your turn");
+	}
+	
+	public void results() {
+		System.out.println("\n\nTotal cards played: " + cardsplayed);
+		System.out.println("Total cards drawn: " + totalcardsdrawn);
+		System.out.println("Extra cards drawn: " + bonuscards);
+		System.out.println("Total cards exhausted: " + exhaustedcardtotal);
+		System.out.println("Total wood gained: " + woodgain);
+		System.out.println("Total food gained: " + foodgain);
+		System.out.println("Total fire gained: " + firegain);
+		System.out.println("Total shelter gained: " + sheltergain);
+		System.out.println("Total phy gained: " + phygain);
+		System.out.println("Total ment gained: " + mentgain);
+		System.out.println("Total time spent: " + timespent);
+		System.out.println("Total energy spent: " + energyspent);
+		System.out.println(dreamdiary);
+		System.exit(0);
+	}
+}
+
+
+/*
+ * deck.add(new SurvivalCards("Forage", 1, 1, "Gain 5 Food."));
+		deck.add(new SurvivalCards("Forage", 1, 1, "Gain 5 Food."));
+		deck.add(new SurvivalCards("Chop Trees", 3, 2, "Gain 5 Wood."));
+		deck.add(new SurvivalCards("Chop Trees", 3, 2, "Gain 5 Wood."));
+		deck.add(new SurvivalCards("Fish", 1, 3, "Gain 10 Food. Draw 1 Card."));
+		deck.add(new SurvivalCards("Fish", 1, 3, "Gain 10 Food. Draw 1 Card."));
+		deck.add(new SurvivalCards("Worry", 0, -3, "Gain 3 Time. Lose 5 Ment."));
+		deck.add(new SurvivalCards("Meditate", 0, 2, "Gain 5 Ment. Draw 1 Card."));
+		deck.add(new SurvivalCards("Build Shelter", 2, 1, "Gain 5 Shelter. Lose 3 Wood."));
+		deck.add(new SurvivalCards("Build Shelter", 2, 1, "Gain 5 Shelter. Lose 3 Wood."));
+		deck.add(new SurvivalCards("Hunt", 3, 3, "50%- Gain 20 Food. 50%- Gain nothing."));
+		deck.add(new SurvivalCards("Start Fire", 2, 2, "Gain 2 Fire (Only if you have 0 Fire)."));
+		deck.add(new SurvivalCards("Tend Fire", 1, 2, "Gain 3 Fire (if you have at least 1 Fire)."));
+		deck.add(new SurvivalCards("Tend Fire", 1, 2, "Gain 3 Fire (if you have at least 1 Fire)."));
+		deck.add(new SurvivalCards("Rest", 0, 0, "Spend the rest of your Time. For every Time you spend, gain 2 Phy and 2 Ment."));
+ */
