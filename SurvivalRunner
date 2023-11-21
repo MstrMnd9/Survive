@@ -1,0 +1,206 @@
+import java.util.*;
+public class SurvivalRunner {
+	public static void main(String[] args) {
+		
+		Scanner Keyboard = new Scanner (System.in);
+		int input;
+		boolean exhaust = false;
+		boolean back;
+		boolean endgame = false;
+		
+		//ment helps you draw cards, phy determines your max energy level
+		
+		Survival S = new Survival();
+		
+		System.out.println("Would you like an intro? 1=yes, 2=no");
+		input = Keyboard.nextInt();
+		if (input == 1) {
+			S.intro();
+			System.out.println("Enter 0 to continue");
+			input = Keyboard.nextInt();
+		}
+		S.clearScreen();
+		
+		while (true) {
+			
+
+			S.drawCards(5 + S.getMent() / 20);
+			if (S.getPlan() > 0) {				//sorry, there realy is no better way to do this, fam. With plan and all :/
+				S.drawCards(3);
+				S.setTime(12);
+				S.setBonuscards(3);
+				if (S.getPower() == "agenda")
+					S.setMent(3);
+			}
+			
+			while (true) {
+				System.out.println(S.getStats() + "\n");              
+				System.out.println(S.showHand());
+				System.out.println("How much food will you eat this morning? (0-" + (S.getPhy() / 20 + 5) + ") (-1 to see deck, -2 to see discard, -3 to see rules):");
+				if (S.getFire() == 0)
+					System.out.println("NOTE: Since you have no fire to boil water this morning, your energy will be cut in half.");
+				input = Keyboard.nextInt();
+				S.clearScreen();
+				if ((input >= 0 && input <= S.getFood()) && input <= (5 + (S.getPhy() / 20)))
+					break;
+				
+				else if (input == -1) {									//shows draw pile
+					System.out.println(S.showDeck());
+					System.out.println("Note: This order does not indicate when you will draw cards."
+							+ "\nEnter 0 to continue:");
+					input = Keyboard.nextInt();
+					S.clearScreen();
+				}
+				
+				else if (input == -2) {									//shows dircard pile
+					System.out.println(S.showDiscard());
+					System.out.println("Enter 0 to continue");
+					input = Keyboard.nextInt();
+					S.clearScreen();
+				}
+				
+				else if (input == -3) {									//shows stats
+					S.showVariables();
+					System.out.println("Enter 0 to continue");
+					input = Keyboard.nextInt();
+					S.clearScreen();
+				}
+				
+				else if (input < -3)									//invalid entry (too low)
+					System.out.println("Error! Please enter a valid number!");
+				
+				else if (input > S.getFood())							//not enough food
+					System.out.println("Error! You don't have enough food!");
+				
+				else if (input > (5 + (S.getPhy() / 20)))				//too much food
+					System.out.println("Error! That's too much food for your body to handle!");
+			}
+			S.setEnergy(input);
+			if (input == 5 + (S.getPhy() / 20) && S.getPower() == "gluttony") {
+				S.setMent(2);
+				S.setPhy(1);
+			}
+			if (S.getFire() == 0)
+				S.setEnergy(input / 2);
+			S.setFood(-input);
+			S.clearScreen();
+			
+			//Entering in how much food to eat ^^^^^   Card Choosing vvvvv
+					
+			
+			while (true) {
+				System.out.println(S.getStats());
+				System.out.println("Enter a number to select a card (0 to end turn, -1 to see deck, -2 to see discard, -3 to see rules): \n");
+				System.out.println(S.showHand());
+				System.out.println("\nChoose a card to play");
+				
+				input = Keyboard.nextInt();
+				S.clearScreen();
+				
+				if (input > S.getHand().size() || input < -3)             //input too high or too low
+				System.out.println("Error! Please enter a valid number to select a card.");
+				
+				else if (input == -1) {									//shows draw pile
+					System.out.println(S.showDeck());
+					System.out.println("Note: This order does not indicate when you will draw cards."
+							+ "\nEnter 0 to continue:");
+					input = Keyboard.nextInt();
+					S.clearScreen();
+				}
+				
+				else if (input == -2) {									//shows dircard pile
+					System.out.println(S.showDiscard());
+					System.out.println("Enter 0 to continue");
+					input = Keyboard.nextInt();
+					S.clearScreen();
+				}
+				
+				else if (input == -3) {									//shows stats
+					S.showVariables();
+					System.out.println("Enter 0 to continue");
+					input = Keyboard.nextInt();
+					S.clearScreen();
+				}
+				
+				else if (input == 0) { 						           //end turn
+					S.endTurn();
+					S.discardHand();
+					break;
+				}
+				
+				else if (S.cardValid(S.getHand().get(input - 1), S.getTime(), S.getEnergy())){ 		    //normal, picks a card
+						S.setEnergy(S.getEnergy() - S.getHand().get(input - 1).getEnergy());           //loses energy
+						S.setTime(S.getTime() - S.getHand().get(input - 1).getTime());                //loses time
+					    exhaust = S.cardEffect(S.getHand().get(input - 1).getName(), input-1);       //card effect takes place
+						if (exhaust == false)
+							S.getDiscard().add(S.getHand().get(input - 1));                        //goes in discard (but not if it exhausts)
+						if (S.getLeaveHand())
+							S.getHand().remove(input - 1);                                       //leaves hand (but not if burn or patience)
+					
+				}
+				
+				if (S.winCheck()) {
+					endgame = true;
+					break;
+				}
+			}
+			
+			//between S.getDay()/night & night/day()
+			
+			if (endgame == false) {
+			if (S.winCheck())
+				break;
+			}
+			
+			S.setEnergy(0);
+			S.setTime(10);
+					
+			
+			S.makeDream();							//between days, you dream of cards to add
+			while (true) {											
+				S.dreamDisplay();
+				
+				input = Keyboard.nextInt();
+				
+				if (input == 0) {						//skip
+					S.clearScreen();
+					S.dreamdiaryupdate();
+					break;
+				}
+				
+				else if (input > 0 && input <= S.getDreamcards().size()) {	//grab one like normal
+					S.dreamPull(input-1);
+					break;
+				}
+				
+				else if (input == -1) {				//removing a card
+					S.removeCard1();
+					
+					while (true) {
+						input = Keyboard.nextInt();
+						if (input <= S.getDeck().size() + S.getDiscard().size() && input >= 0) {
+							S.clearScreen();
+							break;
+						}
+						System.out.println("Error! Invalid entry.");
+						
+					}
+					
+					back = S.removeCard2(input);	//cancel card removal by hitting 0
+					if (back == false)
+						break;
+				}
+				
+				else {								//they entered a wrong number
+					if (input != 0)
+					System.out.println("Error! Invalid entry.");
+				}
+				S.clearScreen();
+				}
+			
+			
+		}
+		
+		
+	}
+}
